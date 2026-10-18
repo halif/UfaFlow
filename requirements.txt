@@ -1,0 +1,3 @@
+PyYAML
+# optional but recommended for better async performance:
+uvloop
