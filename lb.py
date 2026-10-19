@@ -7,17 +7,20 @@ UfaFlow — простой asyncio load balancer (MVP).
 Usage:
   python lb.py config.yaml
 """
+
 import asyncio
-import sys
-import yaml
-import time
 import logging
+import sys
+import time
+from dataclasses import dataclass
 from typing import List, Optional
-from dataclasses import dataclass, field
+
+import yaml
 
 # Try to use uvloop if available
 try:
     import uvloop
+
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except Exception:
     pass
@@ -84,7 +87,12 @@ async def relay_stream(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
             pass
 
 
-async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyncio.StreamWriter, pool: BackendPool, timeout: float = 10.0):
+async def handle_client(
+    client_reader: asyncio.StreamReader,
+    client_writer: asyncio.StreamWriter,
+    pool: BackendPool,
+    timeout: float = 10.0,
+):
     peer = client_writer.get_extra_info("peername")
     backend = pool.choose(client_ip=peer[0] if peer else None)
     if not backend:
@@ -96,7 +104,9 @@ async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyn
     backend.current_conns += 1
     try:
         try:
-            backend_reader, backend_writer = await asyncio.wait_for(asyncio.open_connection(backend.host, backend.port), timeout=timeout)
+            backend_reader, backend_writer = await asyncio.wait_for(
+                asyncio.open_connection(backend.host, backend.port), timeout=timeout
+            )
         except Exception as e:
             logging.warning("Failed to connect to backend %s: %s", backend.name, e)
             backend.up = False
@@ -117,14 +127,18 @@ async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyn
 
 
 async def start_frontend(listen_host: str, listen_port: int, pool: BackendPool):
-    server = await asyncio.start_server(lambda r, w: handle_client(r, w, pool), host=listen_host, port=listen_port)
+    server = await asyncio.start_server(
+        lambda r, w: handle_client(r, w, pool), host=listen_host, port=listen_port
+    )
     addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
     logging.info("Listening on %s (frontend %s:%d)", addrs, listen_host, listen_port)
     async with server:
         await server.serve_forever()
 
 
-async def tcp_health_check_periodic(backends: List[Backend], interval: int, timeout: float):
+async def tcp_health_check_periodic(
+    backends: List[Backend], interval: int, timeout: float
+):
     while True:
         for b in backends:
             try:
@@ -158,14 +172,31 @@ async def main(config_path: str):
     tasks = []
     for fe in frontends:
         be_cfgs = fe.get("backends", [])
-        backends = [Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name")) for b in be_cfgs]
+        backends = [
+            Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name"))
+            for b in be_cfgs
+        ]
         pool = BackendPool(backends, algorithm=fe.get("algorithm", "round_robin"))
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
-    tasks.append(asyncio.create_task(tcp_health_check_periodic(all_backends, conf.get("health_interval", 5), conf.get("health_timeout", 2))))
+    tasks.append(
+        asyncio.create_task(
+            tcp_health_check_periodic(
+                all_backends,
+                conf.get("health_interval", 5),
+                conf.get("health_timeout", 2),
+            )
+        )
+    )
     for fe, pool in pools:
-        tasks.append(asyncio.create_task(start_frontend(fe.get("listen_host", "0.0.0.0"), fe["listen_port"], pool)))
+        tasks.append(
+            asyncio.create_task(
+                start_frontend(
+                    fe.get("listen_host", "0.0.0.0"), fe["listen_port"], pool
+                )
+            )
+        )
     await asyncio.gather(*tasks)
 
 

@@ -8,8 +8,8 @@ Manager will spawn N workers; each worker binds sockets with SO_REUSEPORT (if av
 SIGHUP on manager -> restart workers (reload config)
 SIGTERM/SIGINT -> graceful shutdown
 """
+
 import argparse
-import json
 import logging
 import multiprocessing as mp
 import os
@@ -49,9 +49,13 @@ def create_listen_sockets(frontends: list) -> List[socket.socket]:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             logging.info("Using SO_REUSEPORT on %s:%d", host, port)
         except AttributeError:
-            logging.warning("SO_REUSEPORT not supported on this platform; multi-process gain limited")
+            logging.warning(
+                "SO_REUSEPORT not supported on this platform; multi-process gain limited"
+            )
         except OSError:
-            logging.warning("SO_REUSEPORT not available / permission denied; continuing without it")
+            logging.warning(
+                "SO_REUSEPORT not available / permission denied; continuing without it"
+            )
         sock.bind((host, port))
         sock.listen(1000)
         sock.setblocking(False)
@@ -181,13 +185,17 @@ def run_manager(config_path: str, workers: int):
             # reap dead children and respawn
             for pid, p in list(children.items()):
                 if not p.is_alive():
-                    logging.warning("Worker pid=%d exited unexpectedly; restarting", pid)
+                    logging.warning(
+                        "Worker pid=%d exited unexpectedly; restarting", pid
+                    )
                     children.pop(pid, None)
                     p.join()
                     # spawn replacement
                     env = os.environ.copy()
                     env["UFAFLOW_LISTEN_FDS"] = fds_str
-                    p2 = mp.Process(target=_worker_process_wrapper, args=(config_path,), env=env)
+                    p2 = mp.Process(
+                        target=_worker_process_wrapper, args=(config_path,), env=env
+                    )
                     p2.start()
                     children[p2.pid] = p2
                     logging.info("Respawned worker pid=%d", p2.pid)
@@ -217,7 +225,11 @@ def run_single(config_path: str):
         active_servers = []
         # start servers normally (no external sockets)
         for host, port, pool in servers:
-            srv = await asyncio.start_server(lambda r, w, p=pool: server_mod.handle_client(r, w, p), host=host, port=port)
+            srv = await asyncio.start_server(
+                lambda r, w, p=pool: server_mod.handle_client(r, w, p),
+                host=host,
+                port=port,
+            )
             logging.info("Listening on %s:%d", host, port)
             active_servers.append(srv)
         try:
@@ -258,7 +270,13 @@ def run_single(config_path: str):
 def main():
     parser = argparse.ArgumentParser(description="UfaFlow load balancer")
     parser.add_argument("config", help="Path to YAML config")
-    parser.add_argument("--workers", "-w", type=int, default=1, help="Number of worker processes (default 1)")
+    parser.add_argument(
+        "--workers",
+        "-w",
+        type=int,
+        default=1,
+        help="Number of worker processes (default 1)",
+    )
     args = parser.parse_args()
 
     if args.workers is None or args.workers <= 1:

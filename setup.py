@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="ufaflow",
@@ -9,11 +9,7 @@ setup(
         "PyYAML",
         # optional: uvloop improves async performance if installed
     ],
-    entry_points={
-        "console_scripts": [
-            "ufaflow=ufaflow.cli:main"
-        ]
-    },
+    entry_points={"console_scripts": ["ufaflow=ufaflow.cli:main"]},
     author="halif",
     license="MIT",
 )

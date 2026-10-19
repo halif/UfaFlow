@@ -67,7 +67,12 @@ async def relay_stream(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
             pass
 
 
-async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyncio.StreamWriter, pool: BackendPool, timeout: float = 10.0):
+async def handle_client(
+    client_reader: asyncio.StreamReader,
+    client_writer: asyncio.StreamWriter,
+    pool: BackendPool,
+    timeout: float = 10.0,
+):
     peer = client_writer.get_extra_info("peername")
     backend = pool.choose(client_ip=peer[0] if peer else None)
     if not backend:
@@ -82,7 +87,9 @@ async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyn
     backend.current_conns += 1
     try:
         try:
-            backend_reader, backend_writer = await asyncio.wait_for(asyncio.open_connection(backend.host, backend.port), timeout=timeout)
+            backend_reader, backend_writer = await asyncio.wait_for(
+                asyncio.open_connection(backend.host, backend.port), timeout=timeout
+            )
         except Exception as e:
             logging.warning("Failed to connect to backend %s: %s", backend.name, e)
             backend.up = False
@@ -102,7 +109,9 @@ async def handle_client(client_reader: asyncio.StreamReader, client_writer: asyn
             pass
 
 
-async def tcp_health_check_periodic(backends: List[Backend], interval: int, timeout: float):
+async def tcp_health_check_periodic(
+    backends: List[Backend], interval: int, timeout: float
+):
     while True:
         for b in backends:
             try:
@@ -130,13 +139,24 @@ async def start_servers_from_config(config: dict):
     tasks = []
     for fe in frontends:
         be_cfgs = fe.get("backends", [])
-        backends = [Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name")) for b in be_cfgs]
+        backends = [
+            Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name"))
+            for b in be_cfgs
+        ]
         pool = BackendPool(backends, algorithm=fe.get("algorithm", "round_robin"))
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
     # healthcheck task
-    tasks.append(asyncio.create_task(tcp_health_check_periodic(all_backends, config.get("health_interval", 5), config.get("health_timeout", 2))))
+    tasks.append(
+        asyncio.create_task(
+            tcp_health_check_periodic(
+                all_backends,
+                config.get("health_interval", 5),
+                config.get("health_timeout", 2),
+            )
+        )
+    )
     # start frontends
     servers = []
     for fe, pool in pools:
@@ -157,20 +177,38 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
     pools = []
     for fe in frontends:
         be_cfgs = fe.get("backends", [])
-        backends = [Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name")) for b in be_cfgs]
+        backends = [
+            Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name"))
+            for b in be_cfgs
+        ]
         pool = BackendPool(backends, algorithm=fe.get("algorithm", "round_robin"))
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
     tasks = []
-    tasks.append(asyncio.create_task(tcp_health_check_periodic(all_backends, config.get("health_interval", 5), config.get("health_timeout", 2))))
+    tasks.append(
+        asyncio.create_task(
+            tcp_health_check_periodic(
+                all_backends,
+                config.get("health_interval", 5),
+                config.get("health_timeout", 2),
+            )
+        )
+    )
 
     servers = []
     # Create servers using provided sockets (SO_REUSEPORT case)
     for (fe, pool), sock in zip(pools, sockets):
-        server = await asyncio.start_server(lambda r, w, p=pool: handle_client(r, w, p), sock=sock)
+        server = await asyncio.start_server(
+            lambda r, w, p=pool: handle_client(r, w, p), sock=sock
+        )
         addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
-        logging.info("Worker listening on %s (frontend %s:%d)", addrs, fe.get("listen_host", "0.0.0.0"), fe["listen_port"])
+        logging.info(
+            "Worker listening on %s (frontend %s:%d)",
+            addrs,
+            fe.get("listen_host", "0.0.0.0"),
+            fe["listen_port"],
+        )
         servers.append(server)
 
     # Wait until cancelled
