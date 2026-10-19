@@ -11,21 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.10, 3.11]
+        python: ["3.10", "3.11"]    # версии в кавычках — важно, чтобы YAML не превратил "3.10" в 3.1
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+
       - name: Run tests
         run: |
-          pytest -q
+          python -m pytest -q
+
       - name: Lint
         run: |
           flake8 .
