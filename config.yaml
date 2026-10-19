@@ -1,10 +1,11 @@
-health_interval: 5
-health_timeout: 2
+# Пример конфигурации для lb.py
+health_interval: 5         # секунды между health‑check'ами
+health_timeout: 2          # таймаут health‑connect
 frontends:
   - name: http_front
     listen_host: "0.0.0.0"
     listen_port: 8080
-    algorithm: round_robin
+    algorithm: round_robin  # or least_conn
     backends:
       - host: "127.0.0.1"
         port: 8001
