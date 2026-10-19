@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 CLI / process manager for UfaFlow
+
 Supports:
 - single-process run: python -m ufaflow.cli config.yaml
 - worker-mode: python -m ufaflow.cli config.yaml --workers N
-Manager will spawn N workers; each worker binds sockets with SO_REUSEPORT (if available).
-SIGHUP on manager -> restart workers (reload config)
-SIGTERM/SIGINT -> graceful shutdown
+
+Manager will spawn N workers; each worker binds sockets with SO_REUSEPORT
+(if available). SIGHUP on manager -> restart workers (reload config).
+SIGTERM/SIGINT -> graceful shutdown.
 """
 
 import argparse
@@ -29,7 +31,9 @@ except Exception:
 
 from . import server as server_mod
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+)
 
 
 def load_config(path: str):
@@ -50,11 +54,13 @@ def create_listen_sockets(frontends: list) -> List[socket.socket]:
             logging.info("Using SO_REUSEPORT on %s:%d", host, port)
         except AttributeError:
             logging.warning(
-                "SO_REUSEPORT not supported on this platform; multi-process gain limited"
+                "SO_REUSEPORT not supported on this platform; multi-process "
+                "gain limited"
             )
         except OSError:
             logging.warning(
-                "SO_REUSEPORT not available / permission denied; continuing without it"
+                "SO_REUSEPORT not available / permission denied; continuing "
+                "without it"
             )
         sock.bind((host, port))
         sock.listen(1000)
@@ -75,9 +81,10 @@ def worker_main(config_path: str):
 
     config = load_config(config_path)
     frontends = config.get("frontends", [])
-    # In worker mode we create sockets independently (each worker must set SO_REUSEPORT before bind),
-    # but manager may also create sockets and pass FDs; here we assume manager passed FD env var
-    # We'll support passing LISTEN_FDS via environment (fd numbers separated by comma)
+
+    # In worker mode we create sockets independently (each worker must set
+    # SO_REUSEPORT before bind), but manager may also create sockets and
+    # pass FDs via environment variable.
     fds_env = os.environ.get("UFAFLOW_LISTEN_FDS")
     if fds_env:
         fds = [int(x) for x in fds_env.split(",") if x.strip()]
@@ -86,7 +93,8 @@ def worker_main(config_path: str):
         for s in socks:
             s.setblocking(False)
     else:
-        # fallback: each worker creates its own sockets (SO_REUSEPORT set earlier in manager)
+        # fallback: each worker creates its own sockets (SO_REUSEPORT set by
+        # manager earlier)
         socks = create_listen_sockets(frontends)
 
     async def _run():
@@ -124,23 +132,30 @@ def worker_main(config_path: str):
 
 def run_manager(config_path: str, workers: int):
     """
-    Manager: spawn `workers` worker processes. On SIGHUP restart workers (reload config).
+    Manager: spawn `workers` worker processes. On SIGHUP restart workers
+    (reload config).
     """
     config = load_config(config_path)
     frontends = config.get("frontends", [])
-    # Manager will set env UFAFLOW_LISTEN_FDS with fds of created sockets (so workers can inherit)
+    # Manager will set env UFAFLOW_LISTEN_FDS with fds of created sockets
+    # (so workers can inherit).
     socks = create_listen_sockets(frontends)
     fds = [s.fileno() for s in socks]
     fds_str = ",".join(str(fd) for fd in fds)
-    children: dict = {}
+
+    # children: mapping pid -> Process
+    children = {}
 
     def spawn_workers():
-        nonlocal children
         logging.info("Spawning %d workers...", workers)
         for i in range(workers):
             env = os.environ.copy()
             env["UFAFLOW_LISTEN_FDS"] = fds_str
-            p = mp.Process(target=_worker_process_wrapper, args=(config_path,), env=env)
+            p = mp.Process(
+                target=_worker_process_wrapper,
+                args=(config_path,),
+                env=env,
+            )
             p.start()
             children[p.pid] = p
             logging.info("Spawned worker pid=%d", p.pid)
@@ -150,7 +165,7 @@ def run_manager(config_path: str, workers: int):
         for pid, p in list(children.items()):
             logging.info("Terminating worker pid=%d", pid)
             p.terminate()
-        # join
+        # join/ensure termination
         for pid, p in list(children.items()):
             p.join(timeout=5)
             if p.is_alive():
@@ -190,11 +205,12 @@ def run_manager(config_path: str, workers: int):
                     )
                     children.pop(pid, None)
                     p.join()
-                    # spawn replacement
                     env = os.environ.copy()
                     env["UFAFLOW_LISTEN_FDS"] = fds_str
                     p2 = mp.Process(
-                        target=_worker_process_wrapper, args=(config_path,), env=env
+                        target=_worker_process_wrapper,
+                        args=(config_path,),
+                        env=env,
                     )
                     p2.start()
                     children[p2.pid] = p2
@@ -205,8 +221,8 @@ def run_manager(config_path: str, workers: int):
 
 
 def _worker_process_wrapper(config_path: str):
-    # Runs in child process created by multiprocessing.Process (no custom env param in mp.Process in some platforms),
-    # read UFAFLOW_LISTEN_FDS from os.environ
+    # Runs in child process created by multiprocessing.Process. Child reads
+    # UFAFLOW_LISTEN_FDS from os.environ (safer across platforms).
     worker_main(config_path)
 
 

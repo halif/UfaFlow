@@ -49,7 +49,10 @@ class BackendPool:
         return choices[self._rr_state]
 
 
-async def relay_stream(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+async def relay_stream(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+):
     try:
         while True:
             data = await reader.read(64 * 1024)
@@ -83,20 +86,26 @@ async def handle_client(
         except Exception:
             pass
         return
+
     logging.info("Proxying %s -> %s", peer, backend.name)
     backend.current_conns += 1
     try:
         try:
             backend_reader, backend_writer = await asyncio.wait_for(
-                asyncio.open_connection(backend.host, backend.port), timeout=timeout
+                asyncio.open_connection(backend.host, backend.port),
+                timeout=timeout,
             )
         except Exception as e:
             logging.warning("Failed to connect to backend %s: %s", backend.name, e)
             backend.up = False
             return
+
         t1 = asyncio.create_task(relay_stream(client_reader, backend_writer))
         t2 = asyncio.create_task(relay_stream(backend_reader, client_writer))
-        await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
+        await asyncio.wait(
+            [t1, t2],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
         for t in (t1, t2):
             if not t.done():
                 t.cancel()
@@ -110,7 +119,9 @@ async def handle_client(
 
 
 async def tcp_health_check_periodic(
-    backends: List[Backend], interval: int, timeout: float
+    backends: List[Backend],
+    interval: int,
+    timeout: float,
 ):
     while True:
         for b in backends:
@@ -140,10 +151,18 @@ async def start_servers_from_config(config: dict):
     for fe in frontends:
         be_cfgs = fe.get("backends", [])
         backends = [
-            Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name"))
+            Backend(
+                b["host"],
+                b["port"],
+                b.get("weight", 1),
+                name=b.get("name"),
+            )
             for b in be_cfgs
         ]
-        pool = BackendPool(backends, algorithm=fe.get("algorithm", "round_robin"))
+        pool = BackendPool(
+            backends,
+            algorithm=fe.get("algorithm", "round_robin"),
+        )
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
@@ -162,7 +181,8 @@ async def start_servers_from_config(config: dict):
     for fe, pool in pools:
         host = fe.get("listen_host", "0.0.0.0")
         port = fe["listen_port"]
-        # We'll create server sockets externally (in worker mode) and pass them into start_server via sock param.
+        # We'll create server sockets externally (in worker mode) and pass them
+        # into start_server via sock param.
         # For single-process mode, use default start_server (no sock).
         servers.append((host, port, pool))
     return servers, tasks
@@ -178,10 +198,18 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
     for fe in frontends:
         be_cfgs = fe.get("backends", [])
         backends = [
-            Backend(b["host"], b["port"], b.get("weight", 1), name=b.get("name"))
+            Backend(
+                b["host"],
+                b["port"],
+                b.get("weight", 1),
+                name=b.get("name"),
+            )
             for b in be_cfgs
         ]
-        pool = BackendPool(backends, algorithm=fe.get("algorithm", "round_robin"))
+        pool = BackendPool(
+            backends,
+            algorithm=fe.get("algorithm", "round_robin"),
+        )
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
@@ -200,7 +228,8 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
     # Create servers using provided sockets (SO_REUSEPORT case)
     for (fe, pool), sock in zip(pools, sockets):
         server = await asyncio.start_server(
-            lambda r, w, p=pool: handle_client(r, w, p), sock=sock
+            lambda r, w, p=pool: handle_client(r, w, p),
+            sock=sock,
         )
         addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
         logging.info(
