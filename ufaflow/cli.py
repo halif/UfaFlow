@@ -98,9 +98,7 @@ def validate_config(config: Any) -> dict:
 
     frontends = config.get("frontends")
     if not isinstance(frontends, list) or not frontends:
-        raise ValueError(
-            "Configuration error: 'frontends' must be a non-empty list."
-        )
+        raise ValueError("Configuration error: 'frontends' must be a non-empty list.")
 
     for index, frontend in enumerate(frontends):
         validate_frontend(frontend, index)
@@ -115,9 +113,7 @@ def load_config(path: str):
     except FileNotFoundError as exc:
         raise ValueError(f"Config file not found: {path}") from exc
     except yaml.YAMLError as exc:
-        raise ValueError(
-            f"Invalid YAML in config file '{path}': {exc}"
-        ) from exc
+        raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
 
     return validate_config(config)
 
@@ -169,9 +165,7 @@ def worker_main(config_path: str):
     fds_env = os.environ.get("UFAFLOW_LISTEN_FDS")
     if fds_env:
         fds = [int(x) for x in fds_env.split(",") if x.strip()]
-        socks = [
-            socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds
-        ]
+        socks = [socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds]
         # set non-blocking
         for s in socks:
             s.setblocking(False)
