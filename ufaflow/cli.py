@@ -31,9 +31,7 @@ except Exception:
 
 from . import server as server_mod
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def load_config(path: str):
