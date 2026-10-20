@@ -1,10 +1,10 @@
 <h1 align="center">UfaFlow</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-1.0.5-7c3aed?style=for-the-badge" alt="version" />
+  <img src="https://img.shields.io/badge/Version-1.0.6-7c3aed?style=for-the-badge" alt="version" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="license" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python" />
-  <img src="https://img.shields.io/badge/Release-1.0.5-10b981?style=for-the-badge" alt="release" />
+  <img src="https://img.shields.io/badge/Release-1.0.6-10b981?style=for-the-badge" alt="release" />
   <img src="https://img.shields.io/badge/FastAPI-✓-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="fastapi" />
 </p>
 
@@ -21,9 +21,9 @@
 
 ## Overview
 
-UfaFlow is a lightweight asynchronous worker manager and load balancer for Python services. It is designed to distribute work across worker processes with predictable lifecycle control, simple configuration, and a minimal operational footprint.
+UfaFlow is a lightweight asynchronous worker manager and load balancer for Python services. It distributes traffic across worker processes with predictable lifecycle control, simple configuration, and async-first execution.
 
-The project is built for teams that need:
+The project is designed for teams that need:
 - a simple worker runtime
 - process-level isolation
 - async-first execution
@@ -54,5 +54,36 @@ Many applications need more than a single process, but do not require the comple
 pip install ufaflow
 ```
 
-## Licence
+## Quick start
+
+Create a YAML config file:
+
+```yaml
+health_interval: 5
+health_timeout: 2
+frontends:
+  - listen_host: "0.0.0.0"
+    listen_port: 8080
+    algorithm: round_robin
+    backends:
+      - host: "127.0.0.1"
+        port: 8001
+      - host: "127.0.0.1"
+        port: 8002
+```
+
+Run the load balancer:
+
+```bash
+python -m ufaflow.cli config.yaml
+```
+
+To run with multiple worker processes:
+
+```bash
+python -m ufaflow.cli config.yaml --workers 4
+```
+
+## License
+
 MIT
