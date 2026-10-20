@@ -20,16 +20,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/your-org/ufaflow/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/your-org/ufaflow/ci.yml?branch=main&label=CI&style=flat-square" alt="CI status" />
+  <a href="https://github.com/halif/ufaflow/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/halif/ufaflow/ci.yml?branch=main&label=CI&style=flat-square" alt="CI status" />
   </a>
   <img src="https://img.shields.io/badge/npm-0%20vulns-2E7D32?style=flat-square" alt="npm audit" />
   <img src="https://img.shields.io/badge/security-audits-passing-16a34a?style=flat-square" alt="security audits" />
   <img src="https://img.shields.io/badge/docs-latest-0ea5e9?style=flat-square" alt="docs" />
   <img src="https://img.shields.io/badge/status-stable-22c55e?style=flat-square" alt="status" />
-  <img src="https://img.shields.io/github/stars/your-org/ufaflow?style=flat-square&logo=github&label=stars" alt="stars" />
-  <img src="https://img.shields.io/github/issues/your-org/ufaflow?style=flat-square&logo=github&label=issues" alt="issues" />
-  <img src="https://img.shields.io/github/last-commit/your-org/ufaflow?style=flat-square&logo=github&label=last%20commit" alt="last commit" />
+  <img src="https://img.shields.io/github/stars/halif/ufaflow?style=flat-square&logo=github&label=stars" alt="stars" />
+  <img src="https://img.shields.io/github/issues/halif/ufaflow?style=flat-square&logo=github&label=issues" alt="issues" />
+  <img src="https://img.shields.io/github/last-commit/halif/ufaflow?style=flat-square&logo=github&label=last%20commit" alt="last commit" />
 </p>
 
 ## Overview
