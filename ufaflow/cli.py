@@ -332,7 +332,10 @@ def run_single(config_path: str):  # noqa: C901
             logging.info("Listening on %s:%d", host, port)
             active_servers.append(srv)
         try:
-            await asyncio.gather(*[s.serve_forever() for s in active_servers], *tasks)
+            await asyncio.gather(
+                *[s.serve_forever() for s in active_servers],
+                *tasks,
+            )
         except asyncio.CancelledError:
             logging.info("Shutting down single-process server")
         finally:
