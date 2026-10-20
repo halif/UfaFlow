@@ -19,7 +19,7 @@ import signal
 import socket
 import sys
 import time
-from typing import List
+from typing import Any, List
 
 import yaml
 
@@ -34,9 +34,68 @@ from . import server as server_mod
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
+def validate_backend(backend: Any, frontend_index: int, backend_index: int) -> None:
+    if not isinstance(backend, dict):
+        raise ValueError(
+            f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
+            "expected a mapping with host and port."
+        )
+    if "host" not in backend or "port" not in backend:
+        raise ValueError(
+            f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
+            "must include 'host' and 'port'."
+        )
+    if not isinstance(backend["host"], str) or not backend["host"].strip():
+        raise ValueError(
+            f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
+            "'host' must be a non-empty string."
+        )
+    port = backend["port"]
+    if not isinstance(port, int) or port <= 0 or port > 65535:
+        raise ValueError(
+            f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
+            "'port' must be an integer between 1 and 65535."
+        )
+
+
+def validate_frontend(frontend: Any, index: int) -> None:
+    if not isinstance(frontend, dict):
+        raise ValueError(f"Invalid frontend[{index}]: expected a mapping.")
+    if "listen_port" not in frontend:
+        raise ValueError(f"Invalid frontend[{index}]: missing 'listen_port'.")
+    port = frontend["listen_port"]
+    if not isinstance(port, int) or port <= 0 or port > 65535:
+        raise ValueError(
+            f"Invalid frontend[{index}]: 'listen_port' must be an integer "
+            "between 1 and 65535."
+        )
+    backends = frontend.get("backends", [])
+    if not isinstance(backends, list) or not backends:
+        raise ValueError(f"Invalid frontend[{index}]: 'backends' must be a non-empty list.")
+    for backend_index, backend in enumerate(backends):
+        validate_backend(backend, index, backend_index)
+
+
+def validate_config(config: Any) -> dict:
+    if not isinstance(config, dict):
+        raise ValueError("Configuration must be a mapping/object.")
+    frontends = config.get("frontends")
+    if not isinstance(frontends, list) or not frontends:
+        raise ValueError("Configuration error: 'frontends' must be a non-empty list.")
+    for index, frontend in enumerate(frontends):
+        validate_frontend(frontend, index)
+    return config
+
+
 def load_config(path: str):
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError as exc:
+        raise ValueError(f"Config file not found: {path}") from exc
+    except yaml.YAMLError as exc:
+        raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
+    return validate_config(config)
 
 
 def create_listen_sockets(frontends: list) -> List[socket.socket]:
@@ -293,10 +352,20 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.workers is None or args.workers <= 1:
-        run_single(args.config)
-    else:
-        run_manager(args.config, args.workers)
+    if args.workers < 1:
+        parser.error("--workers must be greater than or equal to 1")
+
+    try:
+        if args.workers <= 1:
+            run_single(args.config)
+        else:
+            run_manager(args.config, args.workers)
+    except ValueError as exc:
+        print(f"Configuration error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except FileNotFoundError as exc:
+        print(f"Configuration file not found: {exc.filename}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":
