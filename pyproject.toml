@@ -25,5 +25,8 @@ line_length = 88
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "W", "I", "C", "B"] # можно уточнить позже
 fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C90"]
+ignore = ["C901"]

@@ -128,7 +128,7 @@ def worker_main(config_path: str):
         logging.info("Worker exiting")
 
 
-def run_manager(config_path: str, workers: int):
+def run_manager(config_path: str, workers: int):  # noqa: C901
     """
     Manager: spawn `workers` worker processes. On SIGHUP restart workers
     (reload config).
@@ -146,7 +146,7 @@ def run_manager(config_path: str, workers: int):
 
     def spawn_workers():
         logging.info("Spawning %d workers...", workers)
-        for i in range(workers):
+        for _ in range(workers):
             env = os.environ.copy()
             env["UFAFLOW_LISTEN_FDS"] = fds_str
             p = mp.Process(
@@ -224,7 +224,7 @@ def _worker_process_wrapper(config_path: str):
     worker_main(config_path)
 
 
-def run_single(config_path: str):
+def run_single(config_path: str):  # noqa: C901
     # single-process run (no manager)
     if uvloop:
         import asyncio as _asyncio

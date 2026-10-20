@@ -199,7 +199,7 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
 
     servers = []
     # Create servers using provided sockets (SO_REUSEPORT case)
-    for (fe, pool), sock in zip(pools, sockets):
+    for (fe, pool), sock in zip(pools, sockets, strict=False):
         server = await asyncio.start_server(
             lambda r, w, p=pool: handle_client(r, w, p), sock=sock
         )
