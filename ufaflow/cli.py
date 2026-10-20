@@ -37,7 +37,11 @@ logging.basicConfig(
 )
 
 
-def validate_backend(backend: Any, frontend_index: int, backend_index: int) -> None:
+def validate_backend(
+    backend: Any,
+    frontend_index: int,
+    backend_index: int,
+) -> None:
     if not isinstance(backend, dict):
         raise ValueError(
             f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
@@ -53,6 +57,7 @@ def validate_backend(backend: Any, frontend_index: int, backend_index: int) -> N
             f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
             "'host' must be a non-empty string."
         )
+
     port = backend["port"]
     if not isinstance(port, int) or port <= 0 or port > 65535:
         raise ValueError(
@@ -66,12 +71,14 @@ def validate_frontend(frontend: Any, index: int) -> None:
         raise ValueError(f"Invalid frontend[{index}]: expected a mapping.")
     if "listen_port" not in frontend:
         raise ValueError(f"Invalid frontend[{index}]: missing 'listen_port'.")
+
     port = frontend["listen_port"]
     if not isinstance(port, int) or port <= 0 or port > 65535:
         raise ValueError(
             f"Invalid frontend[{index}]: 'listen_port' must be an integer "
             "between 1 and 65535."
         )
+
     backends = frontend.get("backends", [])
     if not isinstance(backends, list) or not backends:
         raise ValueError(
@@ -84,9 +91,13 @@ def validate_frontend(frontend: Any, index: int) -> None:
 def validate_config(config: Any) -> dict:
     if not isinstance(config, dict):
         raise ValueError("Configuration must be a mapping/object.")
+
     frontends = config.get("frontends")
     if not isinstance(frontends, list) or not frontends:
-        raise ValueError("Configuration error: 'frontends' must be a non-empty list.")
+        raise ValueError(
+            "Configuration error: 'frontends' must be a non-empty list."
+        )
+
     for index, frontend in enumerate(frontends):
         validate_frontend(frontend, index)
     return config
@@ -99,7 +110,9 @@ def load_config(path: str):
     except FileNotFoundError as exc:
         raise ValueError(f"Config file not found: {path}") from exc
     except yaml.YAMLError as exc:
-        raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
+        raise ValueError(
+            f"Invalid YAML in config file '{path}': {exc}"
+        ) from exc
     return validate_config(config)
 
 
