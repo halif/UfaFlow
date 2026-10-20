@@ -31,7 +31,10 @@ except Exception:
 
 from . import server as server_mod
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 
 def validate_backend(backend: Any, frontend_index: int, backend_index: int) -> None:
@@ -71,7 +74,9 @@ def validate_frontend(frontend: Any, index: int) -> None:
         )
     backends = frontend.get("backends", [])
     if not isinstance(backends, list) or not backends:
-        raise ValueError(f"Invalid frontend[{index}]: 'backends' must be a non-empty list.")
+        raise ValueError(
+            f"Invalid frontend[{index}]: 'backends' must be a non-empty list."
+        )
     for backend_index, backend in enumerate(backends):
         validate_backend(backend, index, backend_index)
 
@@ -145,7 +150,9 @@ def worker_main(config_path: str):
     fds_env = os.environ.get("UFAFLOW_LISTEN_FDS")
     if fds_env:
         fds = [int(x) for x in fds_env.split(",") if x.strip()]
-        socks = [socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds]
+        socks = [
+            socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds
+        ]
         # set non-blocking
         for s in socks:
             s.setblocking(False)
