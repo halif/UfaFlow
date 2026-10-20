@@ -47,11 +47,13 @@ def validate_backend(
             f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
             "expected a mapping with host and port."
         )
+
     if "host" not in backend or "port" not in backend:
         raise ValueError(
             f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
             "must include 'host' and 'port'."
         )
+
     if not isinstance(backend["host"], str) or not backend["host"].strip():
         raise ValueError(
             f"Invalid frontend[{frontend_index}] backend[{backend_index}]: "
@@ -69,6 +71,7 @@ def validate_backend(
 def validate_frontend(frontend: Any, index: int) -> None:
     if not isinstance(frontend, dict):
         raise ValueError(f"Invalid frontend[{index}]: expected a mapping.")
+
     if "listen_port" not in frontend:
         raise ValueError(f"Invalid frontend[{index}]: missing 'listen_port'.")
 
@@ -84,6 +87,7 @@ def validate_frontend(frontend: Any, index: int) -> None:
         raise ValueError(
             f"Invalid frontend[{index}]: 'backends' must be a non-empty list."
         )
+
     for backend_index, backend in enumerate(backends):
         validate_backend(backend, index, backend_index)
 
@@ -100,6 +104,7 @@ def validate_config(config: Any) -> dict:
 
     for index, frontend in enumerate(frontends):
         validate_frontend(frontend, index)
+
     return config
 
 
@@ -113,6 +118,7 @@ def load_config(path: str):
         raise ValueError(
             f"Invalid YAML in config file '{path}': {exc}"
         ) from exc
+
     return validate_config(config)
 
 
