@@ -5,6 +5,7 @@ CLI / process manager for UfaFlow
 Supports:
 - single-process run: python -m ufaflow.cli config.yaml
 - worker-mode: python -m ufaflow.cli config.yaml --workers N
+- status report: python -m ufaflow.cli status config.yaml
 
 Manager will spawn N workers; each worker binds sockets with SO_REUSEPORT
 (if available). SIGHUP on manager -> restart workers (reload config).
@@ -12,6 +13,7 @@ SIGTERM/SIGINT -> graceful shutdown.
 """
 
 import argparse
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -116,6 +118,59 @@ def load_config(path: str):
         raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
 
     return validate_config(config)
+
+
+def collect_runtime_status(config: dict) -> dict:
+    """Return a simple, human-readable runtime status for frontends and backends."""
+    report = {"status": "ok", "frontends": []}
+    overall_status = "ok"
+
+    frontends = config.get("frontends", [])
+    for frontend_index, frontend in enumerate(frontends):
+        frontend_name = frontend.get("name") or f"frontend-{frontend_index}"
+        frontend_report = {
+            "name": frontend_name,
+            "listen_host": frontend.get("listen_host", "0.0.0.0"),
+            "listen_port": frontend["listen_port"],
+            "algorithm": frontend.get("algorithm", "round_robin"),
+            "status": "ok",
+            "backends": [],
+        }
+
+        has_down_backend = False
+        for backend in frontend.get("backends", []):
+            host = backend["host"]
+            port = backend["port"]
+            backend_name = backend.get("name") or f"{host}:{port}"
+            backend_report = {
+                "name": backend_name,
+                "host": host,
+                "port": port,
+                "status": "down",
+                "up": False,
+            }
+            try:
+                with socket.create_connection((host, port), timeout=2):
+                    backend_report["status"] = "up"
+                    backend_report["up"] = True
+            except OSError as exc:
+                backend_report["reason"] = str(exc)
+                has_down_backend = True
+
+            frontend_report["backends"].append(backend_report)
+
+        if has_down_backend:
+            frontend_report["status"] = "degraded"
+            overall_status = "degraded"
+
+        report["frontends"].append(frontend_report)
+
+    report["status"] = overall_status
+    return report
+
+
+def print_runtime_status(report: dict) -> None:
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 def create_listen_sockets(frontends: list) -> List[socket.socket]:
@@ -365,7 +420,8 @@ def run_single(config_path: str):  # noqa: C901
 
 def main():
     parser = argparse.ArgumentParser(description="UfaFlow load balancer")
-    parser.add_argument("config", help="Path to YAML config")
+    parser.add_argument("command", nargs="?", help="Optional command: status")
+    parser.add_argument("config", nargs="?", help="Path to YAML config")
     parser.add_argument(
         "--workers",
         "-w",
@@ -374,6 +430,28 @@ def main():
         help="Number of worker processes (default 1)",
     )
     args = parser.parse_args()
+
+    if args.command == "status":
+        if not args.config:
+            parser.error("status requires a config file path")
+        try:
+            config = load_config(args.config)
+            status = collect_runtime_status(config)
+            print_runtime_status(status)
+            raise SystemExit(0)
+        except ValueError as exc:
+            print(f"Configuration error: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
+        except FileNotFoundError as exc:
+            print(f"Configuration file not found: {exc.filename}", file=sys.stderr)
+            raise SystemExit(1) from exc
+
+    if args.command and args.config is None:
+        args.config = args.command
+        args.command = None
+
+    if args.config is None:
+        parser.error("a config file path is required")
 
     if args.workers < 1:
         parser.error("--workers must be greater than or equal to 1")
@@ -393,3 +471,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
