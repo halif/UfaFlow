@@ -100,7 +100,9 @@ def validate_config(config: Any) -> dict:
 
     frontends = config.get("frontends")
     if not isinstance(frontends, list) or not frontends:
-        raise ValueError("Configuration error: 'frontends' must be a non-empty list.")
+        raise ValueError(
+            "Configuration error: 'frontends' must be a non-empty list."
+        )
 
     for index, frontend in enumerate(frontends):
         validate_frontend(frontend, index)
@@ -117,7 +119,9 @@ def load_config(path: str):
     except yaml.YAMLError as exc:
         raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
 
-    return validate_config(config)
+    config = validate_config(config)
+    logging.info("Loaded configuration from %s with %d frontend(s)", path, len(config["frontends"]))
+    return config
 
 
 def collect_runtime_status(config: dict) -> dict:
@@ -156,12 +160,23 @@ def collect_runtime_status(config: dict) -> dict:
             except OSError as exc:
                 backend_report["reason"] = str(exc)
                 has_down_backend = True
+                logging.warning(
+                    "Backend %s (%s:%s) is unavailable: %s",
+                    backend_name,
+                    host,
+                    port,
+                    exc,
+                )
 
             frontend_report["backends"].append(backend_report)
 
         if has_down_backend:
             frontend_report["status"] = "degraded"
             overall_status = "degraded"
+            logging.warning(
+                "Frontend %s is degraded due to one or more unavailable backends",
+                frontend_name,
+            )
 
         report["frontends"].append(frontend_report)
 
@@ -175,9 +190,10 @@ def print_runtime_status(report: dict) -> None:
 
 def create_listen_sockets(frontends: list) -> List[socket.socket]:
     socks = []
-    for fe in frontends:
+    for idx, fe in enumerate(frontends):
         host = fe.get("listen_host", "0.0.0.0")
         port = fe["listen_port"]
+        frontend_name = fe.get("name") or f"frontend-{idx}"
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # try to set SO_REUSEPORT; may raise AttributeError on some platforms
@@ -194,7 +210,20 @@ def create_listen_sockets(frontends: list) -> List[socket.socket]:
                 "SO_REUSEPORT not available / permission denied; continuing "
                 "without it"
             )
-        sock.bind((host, port))
+        try:
+            sock.bind((host, port))
+        except OSError as exc:
+            logging.error(
+                "Failed to bind socket for frontend '%s' on %s:%s: %s",
+                frontend_name,
+                host,
+                port,
+                exc,
+            )
+            raise RuntimeError(
+                f"Failed to bind socket for frontend '{frontend_name}' on "
+                f"{host}:{port}: {exc}"
+            ) from exc
         sock.listen(1000)
         sock.setblocking(False)
         socks.append(sock)
@@ -203,6 +232,7 @@ def create_listen_sockets(frontends: list) -> List[socket.socket]:
 
 def worker_main(config_path: str):
     # Worker process entrypoint
+    logging.info("Worker starting with config %s", config_path)
     if uvloop:
         asyncio_policy = uvloop.EventLoopPolicy()
         import asyncio as _asyncio
@@ -211,8 +241,14 @@ def worker_main(config_path: str):
 
     import asyncio
 
-    config = load_config(config_path)
+    try:
+        config = load_config(config_path)
+    except Exception as exc:
+        logging.exception("Worker failed to load configuration: %s", exc)
+        raise
+
     frontends = config.get("frontends", [])
+    logging.info("Worker loaded config and found %d frontend(s)", len(frontends))
 
     # In worker mode we create sockets independently (each worker must set
     # SO_REUSEPORT before bind), but manager may also create sockets and
@@ -220,13 +256,27 @@ def worker_main(config_path: str):
     fds_env = os.environ.get("UFAFLOW_LISTEN_FDS")
     if fds_env:
         fds = [int(x) for x in fds_env.split(",") if x.strip()]
-        socks = [socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds]
+        try:
+            socks = [
+                socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM) for fd in fds
+            ]
+        except OSError as exc:
+            logging.exception(
+                "Worker could not inherit listening sockets from manager: %s",
+                exc,
+            )
+            raise RuntimeError(
+                "Worker could not inherit listening sockets from manager. "
+                f"Check UFAFLOW_LISTEN_FDS contents: {fds_env}"
+            ) from exc
         # set non-blocking
         for s in socks:
             s.setblocking(False)
+        logging.info("Worker inherited %d listening socket(s)", len(socks))
     else:
         # fallback: each worker creates its own sockets (SO_REUSEPORT set by
         # manager earlier)
+        logging.info("Worker creating its own listening sockets")
         socks = create_listen_sockets(frontends)
 
     async def _run():
@@ -267,11 +317,16 @@ def run_manager(config_path: str, workers: int):  # noqa: C901
     Manager: spawn `workers` worker processes. On SIGHUP restart workers
     (reload config).
     """
+    logging.info("Manager starting with config %s and %d worker(s)", config_path, workers)
     config = load_config(config_path)
     frontends = config.get("frontends", [])
     # Manager will set env UFAFLOW_LISTEN_FDS with fds of created sockets
     # (so workers can inherit).
-    socks = create_listen_sockets(frontends)
+    try:
+        socks = create_listen_sockets(frontends)
+    except RuntimeError:
+        logging.exception("Manager could not bind listening sockets from config")
+        raise
     fds = [s.fileno() for s in socks]
     fds_str = ",".join(str(fd) for fd in fds)
 
@@ -360,6 +415,7 @@ def _worker_process_wrapper(config_path: str):
 
 def run_single(config_path: str):  # noqa: C901
     # single-process run (no manager)
+    logging.info("Starting single-process mode with config %s", config_path)
     if uvloop:
         import asyncio as _asyncio
 
@@ -471,3 +527,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
