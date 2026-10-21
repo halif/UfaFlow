@@ -61,8 +61,7 @@ frontends:
         port: %d
       - host: "127.0.0.1"
         port: 65535
-"""
-            % port,
+""" % port,
             encoding="utf-8",
         )
 
@@ -92,4 +91,3 @@ def test_cli_help_runs_successfully():
     assert result.returncode == 0
     assert "usage:" in result.stdout.lower()
     assert "UfaFlow" in result.stdout
-

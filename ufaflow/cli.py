@@ -100,9 +100,7 @@ def validate_config(config: Any) -> dict:
 
     frontends = config.get("frontends")
     if not isinstance(frontends, list) or not frontends:
-        raise ValueError(
-            "Configuration error: 'frontends' must be a non-empty list."
-        )
+        raise ValueError("Configuration error: 'frontends' must be a non-empty list.")
 
     for index, frontend in enumerate(frontends):
         validate_frontend(frontend, index)
@@ -120,7 +118,11 @@ def load_config(path: str):
         raise ValueError(f"Invalid YAML in config file '{path}': {exc}") from exc
 
     config = validate_config(config)
-    logging.info("Loaded configuration from %s with %d frontend(s)", path, len(config["frontends"]))
+    logging.info(
+        "Loaded configuration from %s with %d frontend(s)",
+        path,
+        len(config["frontends"]),
+    )
     return config
 
 
@@ -317,7 +319,9 @@ def run_manager(config_path: str, workers: int):  # noqa: C901
     Manager: spawn `workers` worker processes. On SIGHUP restart workers
     (reload config).
     """
-    logging.info("Manager starting with config %s and %d worker(s)", config_path, workers)
+    logging.info(
+        "Manager starting with config %s and %d worker(s)", config_path, workers
+    )
     config = load_config(config_path)
     frontends = config.get("frontends", [])
     # Manager will set env UFAFLOW_LISTEN_FDS with fds of created sockets
@@ -527,5 +531,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
