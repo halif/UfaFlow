@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - 2026-10-21
+
+### Added
+- Added `ufaflow status <config.yaml>` for runtime health reporting
+- Added structured JSON status output for frontend/backend health checks
+
+### Improved
+- Improved worker startup diagnostics and process lifecycle logging
+- Improved config validation errors with frontend/backend context
+- Improved backend availability warnings for faster troubleshooting
+- Improved operational visibility without altering core load-balancing behavior
+
+### Tests
+- Added CLI smoke coverage for status reporting and validation scenarios
+- Added failure-visibility checks for invalid config and degraded backend states
+
 ## [1.0.6] - 2026-10-20
 
 ### Added
