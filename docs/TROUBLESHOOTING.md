@@ -19,7 +19,7 @@ On Windows PowerShell, activate the environment first:
 .\.venv\Scripts\Activate.ps1
 ```
 
-If you are working from a source checkout, the current directory can take precedence over the installed package during imports. Run the import check from outside the repository to verify the installed wheel.
+If you are working from a source checkout, the current directory can take precedence over the installed package during imports. Run the import check from outside the repository to verify the installation.
 
 ### `pip` reports an unexpected version
 
@@ -30,7 +30,7 @@ python -m pip show ufaflow
 python -c "import ufaflow; print(ufaflow.__version__); print(ufaflow.__file__)"
 ```
 
-The `pip show` version should match `ufaflow.__version__`. If they do not match, inspect the printed import path; it may point to a local checkout or a different Python environment. You can compare published versions with:
+The `pip show` version should match `ufaflow.__version__`. If they do not match, inspect the printed import path; it may point to a local checkout or a different Python environment. You can compare it with the source checkout in use.
 
 ```bash
 python -m pip index versions ufaflow
@@ -38,7 +38,7 @@ python -m pip index versions ufaflow
 
 ## Configuration errors
 
-UfaFlow expects a YAML mapping with a non-empty `frontends` list. Every frontend needs an integer `listen_port` from 1 through 65535 and a non-empty list of backends. Each backend needs a non-empty `host` and an integer `port` from 1 through 65535.
+UfaFlow expects a YAML mapping with a non-empty `frontends` list. Every frontend needs an integer `listen_port` from 1 through 65535 and a non-empty list of backends. Each backend needs a non-empty `host` and `port`.
 
 Validate that:
 
@@ -52,7 +52,9 @@ See the [configuration guide](CONFIGURATION.md) for a complete example and optio
 
 ## Address already in use
 
-If startup reports that it cannot bind a listener, another process may already be using the configured `listen_host` and `listen_port`. Stop that process or select a different listening port, then try again. On Windows, you can inspect listeners with:
+If startup reports that it cannot bind a listener, another process may already be using the configured `listen_host` and `listen_port`. Stop that process or select a different listening port, then retry.
+
+On Windows PowerShell:
 
 ```powershell
 Get-NetTCPConnection -LocalPort 8080 -State Listen
@@ -71,11 +73,11 @@ Check that:
 - The backend is reachable from the machine running UfaFlow.
 - Local firewall or network rules allow the connection.
 
-A degraded status does not necessarily mean the frontend listener failed; it indicates at least one configured backend did not accept the TCP check. The command prints a JSON report with per-backend results.
+A degraded status does not necessarily mean the frontend listener failed; it indicates at least one configured backend did not accept the TCP check. The command prints a JSON report with per-backend connectivity details.
 
 ## Multi-worker mode and Windows
 
-Multi-worker mode uses Unix-style socket inheritance and `SO_REUSEPORT` semantics. This is intended for Linux and macOS. If you are running on Windows, prefer the single-process command:
+Multi-worker mode shares listening sockets with child processes via Python multiprocessing on Unix-like systems. This is intended for Linux and macOS. If you are running on Windows, prefer the single-process command:
 
 ```powershell
 python -m ufaflow.cli config.yaml
@@ -103,4 +105,4 @@ python -m ufaflow.cli status config.yaml
 
 ## Still stuck?
 
-When reporting a problem, include your operating system, Python version, UfaFlow version, the exact command, the complete error output, and a sanitized configuration. Remove any secrets or sensitive network details before sharing.
+When reporting a problem, include your operating system, Python version, UfaFlow version, the exact command, the complete error output, and a sanitized configuration. Remove any secrets or sensitive values before sharing logs.

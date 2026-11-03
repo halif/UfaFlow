@@ -28,7 +28,7 @@ The repository also includes a runnable template at [`config.yaml`](../config.ya
 ## Platform notes
 
 - Single-process mode is the recommended option on Windows.
-- Multi-worker mode (`--workers N`) is designed for Unix-like systems where socket inheritance and `SO_REUSEPORT` behave predictably.
+- Multi-worker mode (`--workers N`) is designed for Unix-like systems where the OS supports inherited listening sockets across multiprocessing workers.
 - On Windows, prefer `python -m ufaflow.cli config.yaml` without `--workers` unless you explicitly need to test a Unix-like environment.
 
 ## Options
@@ -80,7 +80,7 @@ Check whether configured backend TCP ports accept connections:
 python -m ufaflow.cli status config.yaml
 ```
 
-The `status` command prints JSON with an overall `ok` or `degraded` state and per-backend connection results. It checks TCP connectivity only; it does not send an HTTP request or validate application-level health. The command exits successfully when the configuration is valid, including when a backend is unreachable; inspect the JSON to determine backend state.
+The `status` command prints JSON with an overall `ok` or `degraded` state and per-backend connection results. It checks TCP connectivity only; it does not send an HTTP request or validate application health.
 
 ## Notes
 

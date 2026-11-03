@@ -2,12 +2,12 @@
 
 <p align="center">
   <a href="https://pypi.org/project/ufaflow/"><img src="https://img.shields.io/pypi/v/ufaflow?style=for-the-badge" alt="PyPI version" /></a>
-  <img src="https://img.shields.io/pypi/pyversions/ufaflow?style=for-the-badge" alt="Python versions" />
-  <a href="https://github.com/halif/UfaFlow/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/halif/UfaFlow/ci.yml?branch=main&label=CI&style=for-the-badge" alt="CI status" /></a>
+  <img src="https://img.shields.io/pyversions/ufaflow?style=for-the-badge" alt="Python versions" />
+  <a href="https://github.com/halif/UfaFlow/actions/workflows/ci.yml"><img src="https://github.com/halif/UfaFlow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status" /></a>
   <a href="https://github.com/halif/UfaFlow/releases/latest"><img src="https://img.shields.io/github/v/release/halif/UfaFlow?style=for-the-badge" alt="Latest release" /></a>
 </p>
 
-UfaFlow is a lightweight, asynchronous worker manager and load balancer for Python services. It runs from a YAML configuration, supports single-process and multi-worker modes, and provides a status command to check configured backends.
+UfaFlow is a lightweight, asynchronous worker manager and load balancer for Python services. It runs from a YAML configuration, supports single-process and multi-worker modes, and provides a status command for runtime checks.
 
 ## Requirements
 
@@ -70,7 +70,7 @@ UfaFlow can check whether the configured backend ports accept a TCP connection a
 python -m ufaflow.cli status config.yaml
 ```
 
-The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. This command checks TCP connectivity, not HTTP or application-level health. See the [configuration guide](docs/CONFIGURATION.md) for all settings, defaults, and details of the status report.
+The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. This command checks TCP connectivity, not HTTP or application-level health.
 
 ## Troubleshooting
 
