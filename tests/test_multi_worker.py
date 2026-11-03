@@ -105,9 +105,11 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
         if process.poll() is None:
             try:
                 process.terminate()
-                process.wait(timeout=5)
+                process.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                process.kill()
+                # The manager normally terminates its workers. As a last resort,
+                # clean up the entire session so a failed test cannot leak workers.
+                os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=5)
         stop_backend.set()
         backend.close()

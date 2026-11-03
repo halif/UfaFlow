@@ -213,8 +213,7 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
         pools.append((fe, pool))
 
     all_backends = [b for _, p in pools for b in p.backends]
-    tasks = []
-    tasks.append(
+    tasks = [
         asyncio.create_task(
             tcp_health_check_periodic(
                 all_backends,
@@ -222,39 +221,42 @@ async def run_worker_with_sockets(config: dict, sockets: List[socket.socket]):
                 config.get("health_timeout", 2),
             )
         )
-    )
+    ]
 
     servers = []
-    # Create servers using provided sockets (SO_REUSEPORT case)
-    for (fe, pool), sock in zip(pools, sockets, strict=False):
-        server = await asyncio.start_server(
-            lambda r, w, p=pool: handle_client(r, w, p),
-            sock=sock,
-        )
-        addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
-        logging.info(
-            "Worker listening on %s (frontend %s:%d)",
-            addrs,
-            fe.get("listen_host", "0.0.0.0"),
-            fe["listen_port"],
-        )
-        servers.append(server)
-
-    # Wait until cancelled
     try:
+        # Create servers using provided sockets shared by the process manager.
+        if len(pools) != len(sockets):
+            raise ValueError(
+                f"Expected {len(pools)} listening socket(s), got {len(sockets)}"
+            )
+        for (fe, pool), sock in zip(pools, sockets, strict=True):
+            server = await asyncio.start_server(
+                lambda r, w, p=pool: handle_client(r, w, p),
+                sock=sock,
+            )
+            addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
+            logging.info(
+                "Worker listening on %s (frontend %s:%d)",
+                addrs,
+                fe.get("listen_host", "0.0.0.0"),
+                fe["listen_port"],
+            )
+            servers.append(server)
+
         await asyncio.gather(*[s.serve_forever() for s in servers], *tasks)
     except asyncio.CancelledError:
         logging.info("Worker cancelled, shutting down servers")
     finally:
-        for s in servers:
-            s.close()
-            try:
-                await s.wait_closed()
-            except Exception:
-                pass
-        for t in tasks:
-            t.cancel()
-            try:
-                await t
-            except Exception:
-                pass
+        for server in servers:
+            server.close()
+        if servers:
+            await asyncio.gather(
+                *(server.wait_closed() for server in servers), return_exceptions=True
+            )
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            # Cancellation is expected during shutdown; consume it so the worker
+            # exits cleanly instead of surfacing CancelledError from run_until_complete.
+            await asyncio.gather(*tasks, return_exceptions=True)
