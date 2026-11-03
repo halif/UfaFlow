@@ -25,7 +25,7 @@ On Windows, you can use a virtual environment:
 
 ```powershell
 py -3.11 -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade ufaflow
 ```
 
@@ -69,6 +69,10 @@ python -m ufaflow.cli status config.yaml
 ```
 
 The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. This command checks TCP connectivity, not HTTP or application-level health. See the [configuration guide](docs/CONFIGURATION.md) for all settings, defaults, and details of the status report.
+
+## Troubleshooting
+
+If something does not work as expected, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the most common setup and runtime issues.
 
 ## Run from a source checkout
 
