@@ -38,6 +38,8 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
                 connection, _ = backend.accept()
             except socket.timeout:
                 continue
+            except OSError:
+                break
             with connection:
                 try:
                     data = connection.recv(1024)
@@ -102,10 +104,10 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
     finally:
         if process.poll() is None:
             try:
-                os.killpg(process.pid, signal.SIGTERM)
+                process.terminate()
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
+                process.kill()
                 process.wait(timeout=5)
         stop_backend.set()
         backend.close()
