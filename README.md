@@ -12,6 +12,8 @@ UfaFlow is a lightweight, asynchronous worker manager and load balancer for Pyth
 ## Requirements
 
 - Python 3.11 or newer
+- Linux or macOS for full multi-worker support
+- Windows is supported for single-process usage
 
 ## Installation
 
@@ -52,7 +54,7 @@ Start UfaFlow with one worker:
 python -m ufaflow.cli config.yaml
 ```
 
-Start it with multiple workers:
+On Linux or macOS, you can start multiple worker processes:
 
 ```bash
 python -m ufaflow.cli config.yaml --workers 4
