@@ -104,7 +104,7 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
             try:
                 os.killpg(process.pid, signal.SIGTERM)
                 process.wait(timeout=5)
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=5)
         stop_backend.set()
