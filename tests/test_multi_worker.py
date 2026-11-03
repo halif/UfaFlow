@@ -1,4 +1,5 @@
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -76,6 +77,7 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
+        start_new_session=True,
     )
     try:
         deadline = time.monotonic() + 10
@@ -98,12 +100,13 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
         else:
             pytest.fail(f"multi-worker listener did not proxy traffic: {last_error}")
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+        if process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+                process.wait(timeout=5)
+            except TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)
         stop_backend.set()
         backend.close()
         backend_thread.join(timeout=2)
