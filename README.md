@@ -12,7 +12,6 @@ UfaFlow is a lightweight, asynchronous worker manager and load balancer for Pyth
 ## Requirements
 
 - Python 3.11 or newer
-- Windows, Linux, or macOS
 
 ## Installation
 
@@ -26,7 +25,7 @@ On Windows, you can use a virtual environment:
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\\.venv\\Scripts\\Activate.ps1
 python -m pip install --upgrade ufaflow
 ```
 
@@ -69,7 +68,7 @@ UfaFlow can check whether the configured backend ports accept a TCP connection a
 python -m ufaflow.cli status config.yaml
 ```
 
-The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. A failed backend check is reported in the JSON output; the status command is intended for diagnostics and does not start the load balancer.
+The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. This command checks TCP connectivity, not HTTP or application-level health. See the [configuration guide](docs/CONFIGURATION.md) for all settings, defaults, and details of the status report.
 
 ## Run from a source checkout
 
