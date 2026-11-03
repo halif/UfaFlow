@@ -1,72 +1,102 @@
+import os
 import socket
 import subprocess
 import sys
-import textwrap
+import threading
+import time
+
+import pytest
+
+from ufaflow.cli import _validate_worker_platform
 
 
-def test_multi_worker_rejects_windows_platform(monkeypatch):
-    """The worker manager is intentionally Unix-only. Windows should stay in single-process mode."""
-    monkeypatch.setattr("ufaflow.cli.os.name", "nt")
-
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "ufaflow.cli",
-            "--workers",
-            "2",
-            "config.yaml",
-        ],
-        cwd=".",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    assert completed.returncode != 0
-    assert "Unix-like systems" in completed.stderr.lower()
+def test_multi_worker_rejects_windows_platform():
+    with pytest.raises(ValueError, match="Unix-like systems"):
+        _validate_worker_platform(2, platform="nt")
 
 
-def test_multi_worker_mode_starts_on_unix(tmp_path):
-    """A minimal worker start is expected to work on Unix-like systems when config is valid."""
+def test_single_worker_is_allowed_on_windows():
+    _validate_worker_platform(1, platform="nt")
+
+
+def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
+    if os.name == "nt":
+        pytest.skip("Multi-worker mode is Unix-only")
+
+    backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    backend.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    backend.bind(("127.0.0.1", 0))
+    backend.listen()
+    backend.settimeout(0.2)
+    backend_port = backend.getsockname()[1]
+    stop_backend = threading.Event()
+
+    def serve_backend():
+        while not stop_backend.is_set():
+            try:
+                connection, _ = backend.accept()
+            except socket.timeout:
+                continue
+            with connection:
+                try:
+                    data = connection.recv(1024)
+                    if data:
+                        connection.sendall(b"echo:" + data)
+                except OSError:
+                    pass
+
+    backend_thread = threading.Thread(target=serve_backend, daemon=True)
+    backend_thread.start()
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        listen_port = reservation.getsockname()[1]
+
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
-        textwrap.dedent(
-            """
-            frontends:
-              - name: local
-                listen_host: "127.0.0.1"
-                listen_port: 18080
-                algorithm: round_robin
-                backends:
-                  - host: "127.0.0.1"
-                    port: 8001
-                  - host: "127.0.0.1"
-                    port: 8002
-            """
-        ),
+        "frontends:\n"
+        "  - name: test\n"
+        '    listen_host: "127.0.0.1"\n'
+        f"    listen_port: {listen_port}\n"
+        "    backends:\n"
+        '      - host: "127.0.0.1"\n'
+        f"        port: {backend_port}\n",
         encoding="utf-8",
     )
 
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "ufaflow.cli",
-            "--workers",
-            "2",
-            str(config_path),
-        ],
-        stdout=subprocess.PIPE,
+    process = subprocess.Popen(
+        [sys.executable, "-m", "ufaflow.cli", "--workers", "2", str(config_path)],
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
     )
     try:
-        proc.wait(timeout=5)
+        deadline = time.monotonic() + 10
+        last_error = None
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                pytest.fail(f"manager exited early: {process.stderr.read()}")
+            try:
+                with socket.create_connection(("127.0.0.1", listen_port), timeout=0.5) as client:
+                    client.settimeout(2)
+                    client.sendall(b"probe")
+                    response = client.recv(1024)
+                    if response == b"echo:probe":
+                        break
+            except OSError as exc:
+                last_error = exc
+                time.sleep(0.1)
+        else:
+            pytest.fail(f"multi-worker listener did not proxy traffic: {last_error}")
     finally:
-        if proc.poll() is None:
-            proc.terminate()
-            proc.wait(timeout=5)
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+        stop_backend.set()
+        backend.close()
+        backend_thread.join(timeout=2)
 
-    # The exact exit code may vary, but the key is to validate the Unix-friendly path exists.
-    assert proc.returncode in {0, 1, 143}
+    assert process.returncode == 0, process.stderr.read()
