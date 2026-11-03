@@ -25,6 +25,12 @@ frontends:
 
 The repository also includes a runnable template at [`config.yaml`](../config.yaml).
 
+## Platform notes
+
+- Single-process mode is the recommended option on Windows.
+- Multi-worker mode (`--workers N`) is designed for Unix-like systems where socket inheritance and `SO_REUSEPORT` behave predictably.
+- On Windows, prefer `python -m ufaflow.cli config.yaml` without `--workers` unless you explicitly need to test a Unix-like environment.
+
 ## Options
 
 ### Top-level settings
@@ -62,7 +68,7 @@ Start the proxy using the configuration file:
 python -m ufaflow.cli config.yaml
 ```
 
-Use multiple worker processes where supported by your runtime and platform:
+On Unix-like systems, use multiple worker processes as needed:
 
 ```bash
 python -m ufaflow.cli config.yaml --workers 4
