@@ -4,10 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-11-03
+
+### Added
+- Added multi-worker support on Unix-like systems by sharing listening sockets with worker processes through Python multiprocessing.
+- Added an end-to-end test for multi-worker traffic proxying and clean shutdown.
+
+### Changed
+- Explicitly reject `--workers > 1` on Windows; Windows remains supported in single-process mode.
+
 ### Documentation
-- Updated the README with current PyPI installation and CLI usage instructions
-- Added configuration and troubleshooting guides
-- Updated the example `config.yaml` to match the documented package CLI and settings
+- Updated the README with current PyPI installation and CLI usage instructions.
+- Added configuration and troubleshooting guides and updated the example `config.yaml`.
+- Clarified platform-specific support for single-process and multi-worker modes.
 
 ## [1.0.7] - 2026-10-21
 
