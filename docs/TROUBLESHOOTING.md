@@ -46,6 +46,7 @@ Validate that:
 - `listen_port` and backend `port` values are numbers, not quoted strings.
 - Every frontend has at least one backend.
 - The path passed to the CLI points to the intended config file.
+- On Windows, you should prefer single-process mode unless you are explicitly testing a Unix-like environment.
 
 See the [configuration guide](CONFIGURATION.md) for a complete example and option details.
 
@@ -71,6 +72,14 @@ Check that:
 - Local firewall or network rules allow the connection.
 
 A degraded status does not necessarily mean the frontend listener failed; it indicates at least one configured backend did not accept the TCP check. The command prints a JSON report with per-backend results.
+
+## Multi-worker mode and Windows
+
+Multi-worker mode uses Unix-style socket inheritance and `SO_REUSEPORT` semantics. This is intended for Linux and macOS. If you are running on Windows, prefer the single-process command:
+
+```powershell
+python -m ufaflow.cli config.yaml
+```
 
 ## CLI help and commands
 
