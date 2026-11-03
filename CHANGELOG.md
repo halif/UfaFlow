@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Documentation
+- Updated the README with current PyPI installation and CLI usage instructions
+- Added configuration and troubleshooting guides
+- Updated the example `config.yaml` to match the documented package CLI and settings
+
 ## [1.0.7] - 2026-10-21
 
 ### Added

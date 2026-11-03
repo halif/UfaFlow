@@ -1,68 +1,44 @@
 <h1 align="center">UfaFlow</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-1.0.6-7c3aed?style=for-the-badge" alt="version" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="license" />
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python" />
-  <img src="https://img.shields.io/badge/Release-1.0.6-10b981?style=for-the-badge" alt="release" />
-  <img src="https://img.shields.io/badge/FastAPI-✓-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="fastapi" />
+  <a href="https://pypi.org/project/ufaflow/"><img src="https://img.shields.io/pypi/v/ufaflow?style=for-the-badge" alt="PyPI version" /></a>
+  <img src="https://img.shields.io/pyversions/ufaflow?style=for-the-badge" alt="Python versions" />
+  <a href="https://github.com/halif/UfaFlow/actions/workflows/ci.yml"><img src="https://github.com/halif/UfaFlow/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status" /></a>
+  <a href="https://github.com/halif/UfaFlow/releases/latest"><img src="https://img.shields.io/github/v/release/halif/UfaFlow?style=for-the-badge" alt="Latest release" /></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/halif/ufaflow/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/halif/ufaflow/ci.yml?branch=main&label=CI&style=flat-square" alt="CI status" />
-  </a>
-  <img src="https://img.shields.io/badge/security-audits-passing-16a34a?style=flat-square" alt="security audits" />
-  <img src="https://img.shields.io/badge/status-stable-22c55e?style=flat-square" alt="status" />
-  <img src="https://img.shields.io/github/stars/halif/ufaflow?style=flat-square&logo=github&label=stars" alt="stars" />
-  <img src="https://img.shields.io/github/issues/halif/ufaflow?style=flat-square&logo=github&label=issues" alt="issues" />
-  <img src="https://img.shields.io/github/last-commit/halif/ufaflow?style=flat-square&logo=github&label=last%20commit" alt="last commit" />
-</p>
+UfaFlow is a lightweight, asynchronous worker manager and load balancer for Python services. It runs from a YAML configuration, supports single-process and multi-worker modes, and provides a status command for runtime checks.
 
-## Overview
+## Requirements
 
-UfaFlow is a lightweight asynchronous worker manager and load balancer for Python services. It distributes traffic across worker processes with predictable lifecycle control, simple configuration, and async-first execution.
-
-The project is designed for teams that need:
-- a simple worker runtime
-- process-level isolation
-- async-first execution
-- predictable startup and shutdown behavior
-- easy deployment in development and production-like environments
-
-## Why UfaFlow
-
-Many applications need more than a single process, but do not require the complexity of a full orchestration platform. UfaFlow acts as a lightweight execution layer that helps you:
-- manage multiple workers with a single runtime
-- balance traffic or task distribution across processes
-- keep lifecycle management explicit and controllable
-- reduce operational overhead for small-to-medium service deployments
-
-## Key Features
-
-- Async-first worker orchestration
-- Configurable worker pool and process management
-- Lightweight request balancing across workers
-- Support for FastAPI and Python service integration
-- YAML-based configuration
-- Clean startup and shutdown lifecycle behavior
-- Simple deployment model for local and cloud environments
+- Python 3.11 or newer
+- Linux or macOS for full multi-worker support
+- Windows is supported for single-process usage
 
 ## Installation
 
+Install the latest published version from PyPI:
+
 ```bash
-pip install ufaflow
+python -m pip install --upgrade ufaflow
+```
+
+On Windows, you can use a virtual environment:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade ufaflow
 ```
 
 ## Quick start
 
-Create a YAML config file:
+Create a file named `config.yaml`:
 
 ```yaml
-health_interval: 5
-health_timeout: 2
 frontends:
-  - listen_host: "0.0.0.0"
+  - name: local
+    listen_host: "127.0.0.1"
     listen_port: 8080
     algorithm: round_robin
     backends:
@@ -72,18 +48,43 @@ frontends:
         port: 8002
 ```
 
-Run the load balancer:
+Start UfaFlow with one worker:
 
 ```bash
 python -m ufaflow.cli config.yaml
 ```
 
-To run with multiple worker processes:
+On Linux or macOS, you can start multiple worker processes:
 
 ```bash
 python -m ufaflow.cli config.yaml --workers 4
 ```
 
+The configured backend services should be running and reachable at the listed host and port addresses. Stop the process with `Ctrl+C`.
+
+## Check backend status
+
+UfaFlow can check whether the configured backend ports accept a TCP connection and print a JSON report:
+
+```bash
+python -m ufaflow.cli status config.yaml
+```
+
+The report's overall status is `ok` when all checked backends are reachable and `degraded` when one or more are unavailable. This command checks TCP connectivity, not HTTP or application-level health.
+
+## Troubleshooting
+
+If something does not work as expected, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the most common setup and runtime issues.
+
+## Run from a source checkout
+
+After cloning the repository, install the project and test dependencies, then run the test suite:
+
+```bash
+python -m pip install -e . pytest
+python -m pytest -q
+```
+
 ## License
 
-MIT
+MIT. See the [LICENSE](LICENSE) file.
