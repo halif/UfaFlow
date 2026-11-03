@@ -339,13 +339,13 @@ def run_manager(config_path: str, workers: int):  # noqa: C901
 
     def spawn_workers():
         logging.info("Spawning %d workers...", workers)
+        # Set the environment before starting child processes so the workers
+        # inherit the listening socket FDs on all supported platforms.
+        os.environ["UFAFLOW_LISTEN_FDS"] = fds_str
         for _ in range(workers):
-            env = os.environ.copy()
-            env["UFAFLOW_LISTEN_FDS"] = fds_str
             p = mp.Process(
                 target=_worker_process_wrapper,
                 args=(config_path,),
-                env=env,
             )
             p.start()
             children[p.pid] = p
@@ -396,12 +396,10 @@ def run_manager(config_path: str, workers: int):  # noqa: C901
                     )
                     children.pop(pid, None)
                     p.join()
-                    env = os.environ.copy()
-                    env["UFAFLOW_LISTEN_FDS"] = fds_str
+                    os.environ["UFAFLOW_LISTEN_FDS"] = fds_str
                     p2 = mp.Process(
                         target=_worker_process_wrapper,
                         args=(config_path,),
-                        env=env,
                     )
                     p2.start()
                     children[p2.pid] = p2
