@@ -32,7 +32,10 @@ except Exception:
 
 from . import server as server_mod
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 
 def validate_backend(backend: Any, frontend_index: int, backend_index: int) -> None:
@@ -205,7 +208,9 @@ def worker_main(config_path: str, listen_sockets: List[socket.socket]) -> None:
     import asyncio
 
     config = load_config(config_path)
-    logging.info("Worker loaded config and found %d frontend(s)", len(config["frontends"]))
+    logging.info(
+        "Worker loaded config and found %d frontend(s)", len(config["frontends"])
+    )
 
     async def run():
         await server_mod.run_worker_with_sockets(config, listen_sockets)
@@ -337,7 +342,9 @@ def run_single(config_path: str):  # noqa: C901
             logging.info("Listening on %s:%d", host, port)
             active_servers.append(server)
         try:
-            await asyncio.gather(*[server.serve_forever() for server in active_servers], *tasks)
+            await asyncio.gather(
+                *[server.serve_forever() for server in active_servers], *tasks
+            )
         except asyncio.CancelledError:
             logging.info("Shutting down single-process server")
         finally:

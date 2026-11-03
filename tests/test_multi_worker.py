@@ -65,7 +65,14 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
     )
 
     process = subprocess.Popen(
-        [sys.executable, "-m", "ufaflow.cli", "--workers", "2", str(config_path)],
+        [
+            sys.executable,
+            "-m",
+            "ufaflow.cli",
+            "--workers",
+            "2",
+            str(config_path),
+        ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
@@ -77,7 +84,9 @@ def test_multi_worker_proxies_traffic_and_shuts_down(tmp_path):
             if process.poll() is not None:
                 pytest.fail(f"manager exited early: {process.stderr.read()}")
             try:
-                with socket.create_connection(("127.0.0.1", listen_port), timeout=0.5) as client:
+                with socket.create_connection(
+                    ("127.0.0.1", listen_port), timeout=0.5
+                ) as client:
                     client.settimeout(2)
                     client.sendall(b"probe")
                     response = client.recv(1024)
